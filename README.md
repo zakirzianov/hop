@@ -39,7 +39,7 @@ wget -O install.sh https://raw.githubusercontent.com/zakirzianov/hop/main/instal
 ### ⚡ Последующие запуски
 При первой установке скрипт автоматически прописывается в систему. В дальнейшем, чтобы открыть меню, просто введите в терминале:
 ```bash
-gokaskad
+hop
 ```
 
 ---
