@@ -295,7 +295,7 @@ show_menu() {
             5) list_active_rules ;;
             6) delete_single_rule ;;
             7) flush_rules ;;
-            9) show_instructions ;;
+            8) show_instructions ;;
             0) exit 0 ;;
             *) ;;
         esac
