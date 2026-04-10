@@ -65,7 +65,7 @@ prepare_system() {
 show_instructions() {
     clear
     echo -e "${MAGENTA}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${MAGENTA}║             📚 ИНСТРУКЦИЯ                                    ║${NC}"
+    echo -e "${MAGENTA}║             📚 ИНСТРУКЦИЯ: КАК НАСТРОИТЬ КАСКАД              ║${NC}"
     echo -e "${MAGENTA}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${CYAN}ШАГ 1: Подготовка${NC}"
@@ -273,7 +273,8 @@ flush_rules() {
 
 # --- МЕНЮ ---
 show_menu() {
-    while true; do        
+    while true; do
+        clear
         echo -e "1) Настроить ${CYAN}AmneziaWG / WireGuard${NC} (UDP)"
         echo -e "2) Настроить ${CYAN}VLESS / XRay${NC} (TCP)"
         echo -e "3) Настроить ${CYAN}TProxy / MTProto${NC} (TCP)"
@@ -294,7 +295,7 @@ show_menu() {
             5) list_active_rules ;;
             6) delete_single_rule ;;
             7) flush_rules ;;
-            8) show_instructions ;;
+            9) show_instructions ;;
             0) exit 0 ;;
             *) ;;
         esac
@@ -304,5 +305,4 @@ show_menu() {
 # --- ЗАПУСК ---
 check_root
 prepare_system
-show_promo
 show_menu
