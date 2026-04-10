@@ -78,7 +78,7 @@ show_instructions() {
     echo -e "2. Введите ${YELLOW}IP${NC} и ${YELLOW}Порты${NC} (входящий и исходящий)."
     echo -e "3. Скрипт создаст 'мост' через этот VPS."
     echo ""
-    echo -e "${CYAN}ШАГ 3: Настройка Клиента или файла конфигурации (Важно!)${NC}"
+    echo -e "${CYAN}ШАГ 3: Настройка Клиента (Важно!)${NC}"
     echo -e "1. Откройте приложение клиента."
     echo -e "2. В настройках соединения найдите поле ${YELLOW}Endpoint / Адрес сервера${NC}."
     echo -e "3. Замените зарубежный IP на ${GREEN}IP ЭТОГО СЕРВЕРА${NC}."
@@ -165,11 +165,13 @@ apply_iptables_rules() {
 
     echo -e "${YELLOW}[*] Применение правил...${NC}"
 
+    # Удаление старых правил (по входящему порту)
     iptables -t nat -D PREROUTING -p "$PROTO" --dport "$IN_PORT" -j DNAT --to-destination "$TARGET_IP:$OUT_PORT" 2>/dev/null
     iptables -D INPUT -p "$PROTO" --dport "$IN_PORT" -j ACCEPT 2>/dev/null
     iptables -D FORWARD -p "$PROTO" -d "$TARGET_IP" --dport "$OUT_PORT" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
     iptables -D FORWARD -p "$PROTO" -s "$TARGET_IP" --sport "$OUT_PORT" -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
 
+    # Новые правила
     iptables -A INPUT -p "$PROTO" --dport "$IN_PORT" -j ACCEPT
     iptables -t nat -A PREROUTING -p "$PROTO" --dport "$IN_PORT" -j DNAT --to-destination "$TARGET_IP:$OUT_PORT"
     
@@ -180,8 +182,9 @@ apply_iptables_rules() {
     iptables -A FORWARD -p "$PROTO" -d "$TARGET_IP" --dport "$OUT_PORT" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
     iptables -A FORWARD -p "$PROTO" -s "$TARGET_IP" --sport "$OUT_PORT" -m state --state ESTABLISHED,RELATED -j ACCEPT
 
+    # Настройка UFW если активен
     if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
-        ufw allow "$IN_PORT"/$PROTO >/dev/null
+        ufw allow "$IN_PORT"/"$PROTO" >/dev/null
         sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
         ufw reload >/dev/null
     fi
@@ -204,6 +207,7 @@ list_active_rules() {
         if [[ -n "$l_port" ]]; then echo -e "$l_port\t\t$l_proto\t\t$l_dest"; fi
     done
     echo ""
+
     read -p "Нажмите Enter..."
 }
 
@@ -233,12 +237,15 @@ delete_single_rule() {
     read -p "Номер правила для удаления (0 отмена): " rule_num
     if [[ "$rule_num" == "0" || -z "${RULES_LIST[$rule_num]}" ]]; then return; fi
 
+    # Разбираем строку
     IFS=':' read -r d_port d_proto d_dest <<< "${RULES_LIST[$rule_num]}"
+    local target_ip="${d_dest%:*}"
+    local target_port="${d_dest#*:}"
     
     iptables -t nat -D PREROUTING -p "$d_proto" --dport "$d_port" -j DNAT --to-destination "$d_dest" 2>/dev/null
     iptables -D INPUT -p "$d_proto" --dport "$d_port" -j ACCEPT 2>/dev/null
-    iptables -D FORWARD -p "$d_proto" -d "${d_dest%:*}" --dport "$d_port" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
-    iptables -D FORWARD -p "$d_proto" -s "${d_dest%:*}" --sport "$d_port" -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
+    iptables -D FORWARD -p "$d_proto" -d "$target_ip" --dport "$target_port" -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
+    iptables -D FORWARD -p "$d_proto" -s "$target_ip" --sport "$target_port" -m state --state ESTABLISHED,RELATED -j ACCEPT 2>/dev/null
     
     netfilter-persistent save > /dev/null
     echo -e "${GREEN}[OK] Правило удалено.${NC}"
@@ -266,25 +273,30 @@ flush_rules() {
 
 # --- МЕНЮ ---
 show_menu() {
-    while true; do
-        clear
+    while true; do        
         echo -e "1) Настроить ${CYAN}AmneziaWG / WireGuard${NC} (UDP)"
         echo -e "2) Настроить ${CYAN}VLESS / XRay${NC} (TCP)"
-        echo -e "3) Посмотреть активные правила"
-        echo -e "4) ${RED}Удалить одно правило${NC}"
-        echo -e "5) ${RED}Сбросить ВСЕ настройки${NC}"
-        echo -e "6) ${MAGENTA}📚 Инструкция${NC}" 
+        echo -e "3) Настроить ${CYAN}TProxy / MTProto${NC} (TCP)"
+        echo -e "4) 🛠 Создать ${YELLOW}Кастомное правило${NC} (Разные порты, SSH, RDP...)"
+        echo -e "5) Посмотреть активные правила"
+        echo -e "6) ${RED}Удалить одно правило${NC}"
+        echo -e "7) ${RED}Сбросить ВСЕ настройки${NC}"
+        echo -e "8) ${MAGENTA}📚 ИНСТРУКЦИЯ (Как настроить)${NC}" 
         echo -e "0) Выход"
-        read -p "> " choice
+        echo -e "------------------------------------------------------"
+        read -p "Ваш выбор: " choice
 
         case $choice in
             1) configure_rule "udp" "AmneziaWG" ;;
             2) configure_rule "tcp" "VLESS" ;;
-            3) list_active_rules ;;
-            4) delete_single_rule ;;
-            5) flush_rules ;;
-            6) show_instructions ;;
+            3) configure_rule "tcp" "MTProto/TProxy" ;;
+            4) configure_custom_rule ;;
+            5) list_active_rules ;;
+            6) delete_single_rule ;;
+            7) flush_rules ;;
+            8) show_instructions ;;
             0) exit 0 ;;
+            *) ;;
         esac
     done
 }
@@ -292,4 +304,5 @@ show_menu() {
 # --- ЗАПУСК ---
 check_root
 prepare_system
+show_promo
 show_menu
