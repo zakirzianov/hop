@@ -268,12 +268,12 @@ flush_rules() {
 show_menu() {
     while true; do
         clear
-        echo -e "1) UDP"
-        echo -e "2) TCP"
-        echo -e "3) Список"
-        echo -e "4) Удалить"
-        echo -e "5) Сброс"
-        echo -e "6) Инструкция"
+        echo -e "1) Настроить ${CYAN}AmneziaWG / WireGuard${NC} (UDP)"
+        echo -e "2) Настроить ${CYAN}VLESS / XRay${NC} (TCP)"
+        echo -e "3) Посмотреть активные правила"
+        echo -e "4) ${RED}Удалить одно правило${NC}"
+        echo -e "5) ${RED}Сбросить ВСЕ настройки${NC}"
+        echo -e "6) ${MAGENTA}📚 Инструкция${NC}" 
         echo -e "0) Выход"
         read -p "> " choice
 
